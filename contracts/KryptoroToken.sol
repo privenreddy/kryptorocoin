@@ -150,82 +150,25 @@ contract StandardToken is ERC20, BasicToken {
 }
 
 
-
-/**
- * @title Mintable token
- * @dev Simple ERC20 Token example, with mintable token creation
- */
-contract MintableToken is StandardToken, Ownable {
-
-    uint256 public hardCap;
-
-    event Mint(address indexed to, uint256 amount);
-    event MintFinished();
-
-    bool public mintingFinished = false;
-
-
-    modifier canMint() {
-        require(!mintingFinished);
-        _;
-    }
-
-    /**
-     * @dev Function to mint tokens
-     * @param _to The address that will receive the minted tokens.
-     * @param _amount The amount of tokens to mint.
-     * @return A boolean that indicates if the operation was successful.
-     */
-    function mint(address _to, uint256 _amount) onlyOwner canMint public returns (bool) {
-        totalSupply = totalSupply.add(_amount);
-        balances[_to] = balances[_to].add(_amount);
-        Mint(_to, _amount);
-        Transfer(address(0), _to, _amount);
-        return true;
-    }
-
-    /**
-     * @dev Function to stop minting new tokens.
-     * @return True if the operation was successful.
-     */
-    function finishMinting() onlyOwner canMint public returns (bool) {
-        mintingFinished = true;
-        MintFinished();
-        return true;
-    }
-}
-
-
-
 /**
  * @title KryptoroToken
  * @dev Very simple ERC20 Token example, where all tokens are pre-assigned to the creator.
  * Note they can later distribute these tokens as they wish using `transfer` and other
  * `StandardToken` functions.
  */
-contract KryptoroToken is MintableToken, Destructible {
+contract KryptoroToken is StandardToken, Destructible {
 
     string public constant name = "KRYPTORO Coin";
     string public constant symbol = "KTO";
     uint8 public constant decimals = 18;
 
+    uint256 public constant INITIAL_SUPPLY = 100 * 1000000 * (10 ** uint256(decimals));
+
     /**
-     * @dev Constructor that gives msg.sender all of existing tokens.
-     */
+    * @dev Constructor that gives msg.sender all of existing tokens.
+    */
     function KryptoroToken() public {
-        hardCap = 100 * 1000000 * (10 ** uint256(decimals));
-    }
-
-
-    /**
-     * @dev Function to mint tokens
-     * @param _to The address that will receive the minted tokens.
-     * @param _amount The amount of tokens to mint.
-     * @return A boolean that indicates if the operation was successful.
-     */
-    function mint(address _to, uint256 _amount) onlyOwner canMint public returns (bool) {
-        require(totalSupply.add(_amount) <= hardCap);
-
-        return super.mint(_to, _amount);
+        totalSupply = INITIAL_SUPPLY;
+        balances[msg.sender] = INITIAL_SUPPLY;
     }
 }

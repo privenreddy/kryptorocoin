@@ -28,12 +28,6 @@ contract KTOCrowdsale is Ownable{
     // how many token units a buyer gets per wei
     uint256 public rate;
 
-    // amount of raised money in wei
-    uint256 public weiRaised;
-
-    // amount of hard cap
-    uint256 public cap;
-
     /**
      * event for token purchase logging
      * @param purchaser who paid for the tokens
@@ -47,20 +41,18 @@ contract KTOCrowdsale is Ownable{
 
     event WalletAddressUpdated(bool state);
 
-    function KTOCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address _token, uint256 _cap) public {
-        require(_startTime >= now);
-        require(_endTime >= _startTime);
-        require(_rate > 0);
-        require(_wallet != address(0));
-        require(_token != address(0));
-        require(_cap > 0);
+    function KTOCrowdsale() public {
+        token = createTokenContract();
+        startTime = 1532332800;
+        endTime = 1539590400;
+        rate = 612;
+        wallet = 0x34367d515ff223a27985518f2780cccc4a7e0fc9;
+    }
 
-        token = KryptoroToken(_token);
-        startTime = _startTime;
-        endTime = _endTime;
-        rate = _rate;
-        wallet = _wallet;
-        cap = _cap;
+    // creates the token to be sold.
+    // override this method to have crowdsale of a specific mintable token.
+    function createTokenContract() internal returns (KryptoroToken) {
+        return new KryptoroToken();
     }
 
 
@@ -79,10 +71,7 @@ contract KTOCrowdsale is Ownable{
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
 
-        // update state
-        weiRaised = weiRaised.add(weiAmount);
-
-        token.mint(beneficiary, tokens);
+        token.transfer(beneficiary, tokens);
         TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         forwardFunds();
@@ -96,25 +85,23 @@ contract KTOCrowdsale is Ownable{
 
     // @return true if the transaction can buy tokens
     function validPurchase() internal view returns (bool) {
-        bool withinPeriod = now >= startTime && now <= endTime;
         bool nonZeroPurchase = msg.value != 0;
-        bool withinCap = weiRaised.add(msg.value) <= cap;
+        bool withinPeriod = now >= startTime && now <= endTime;
 
-        return withinPeriod && nonZeroPurchase && withinCap;
+        return nonZeroPurchase && withinPeriod;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        bool capReached = weiRaised >= cap;
         bool timeEnded = now > endTime;
 
-        return timeEnded || capReached;
+        return timeEnded;
     }
 
     // update token contract
     function updateKryptoroToken(address _tokenAddress) onlyOwner{
         require(_tokenAddress != address(0));
-        token = KryptoroToken(_tokenAddress);
+        token.transferOwnership(_tokenAddress);
 
         TokenContractUpdated(true);
     }
@@ -127,4 +114,10 @@ contract KTOCrowdsale is Ownable{
         WalletAddressUpdated(true);
     }
 
+    // transfer tokens
+    function transferTokens(address _to, uint256 _amount) onlyOwner {
+        require(_to != address(0));
+
+        token.transfer(_to, _amount);
+    }
 }
